@@ -4,27 +4,52 @@ from playwright.async_api import async_playwright
 async def get_lattes_basic_info(lattes_id):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_context().new_page()
+        context = await browser.new_context()
+        page = await context.new_page()
         
         # URL base de currículos públicos
         url = f"http://lattes.cnpq.br/{lattes_id}"
         
         print(f"Buscando dados do ID: {lattes_id}...")
-        await page.goto(url)
-        
-        # Extração de campos fundamentais para a ontologia
-        nome = await page.inner_text('h2.nome')
-        resumo = await page.inner_text('p.resumo')
-        
-        # Exemplo de captura de produções (simplificado)
-        producoes = await page.locator('.artigo-completo').count()
+        try:
+            await page.goto(url, timeout=30000)
 
-        data = {
-            "id": lattes_id,
-            "nome": nome.strip(),
-            "resumo": resumo.strip()[:200] + "...", # Para o "tooltip" do grafo
-            "total_artigos": producoes
-        }
+            # Extração de campos fundamentais com tratamento de falhas
+            try:
+                nome = await page.inner_text('h2.nome', timeout=5000)
+                nome = nome.strip()
+            except Exception:
+                print(f"Aviso: Nome não encontrado para o ID {lattes_id}")
+                nome = "Nome não encontrado"
+
+            try:
+                resumo = await page.inner_text('p.resumo', timeout=5000)
+                resumo = resumo.strip()[:200] + "..." # Para o "tooltip" do grafo
+            except Exception:
+                print(f"Aviso: Resumo não encontrado para o ID {lattes_id}")
+                resumo = "Resumo não encontrado"
+
+            # Exemplo de captura de produções (simplificado)
+            try:
+                producoes = await page.locator('.artigo-completo').count()
+            except Exception:
+                print(f"Aviso: Não foi possível contar produções para o ID {lattes_id}")
+                producoes = 0
+
+            data = {
+                "id": lattes_id,
+                "nome": nome,
+                "resumo": resumo,
+                "total_artigos": producoes
+            }
+        except Exception as e:
+            print(f"Erro ao carregar a página para o ID {lattes_id}: {e}")
+            data = {
+                "id": lattes_id,
+                "nome": "Erro ao carregar",
+                "resumo": "Erro ao carregar",
+                "total_artigos": 0
+            }
 
         await browser.close()
         return data
