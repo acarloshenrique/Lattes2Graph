@@ -1,10 +1,14 @@
 import asyncio
+import os
 from src.scraper import get_lattes_basic_info
 from src.architect import create_research_graph
 from src.visualizer import generate_interactive_graph
 
 async def run_pipeline():
     print("🚀 Iniciando o pipeline Lattes2Graph...\n")
+
+    # Garantir que a pasta output/ existe
+    os.makedirs('output', exist_ok=True)
 
     # Passo 1: Extração (Simulando uma lista de IDs do seu grupo de pesquisa/Mestrado)
     lattes_ids = [
